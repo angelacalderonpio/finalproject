@@ -1,0 +1,173 @@
+---
+title: "Gov51 Project"
+author: "Angela Calderon Pio"
+format: pdf
+---
+
+# Preliminary RQ: 
+
+How is state-level per-pupil education spending in 1989-90 associated with intergenerational income mobility across U.S. commuting zones?
+
+This research question has been refined from the initial proposal to better reflect the structure of the data. While the original question focused on state-level comparisons, the analysis uses commuting zones as the primary unit of observation, with state-level spending assigned to each zone.
+
+Additionally, this analysis combines data from different sources that are measured at different points in time. Intergenerational mobility estimates are based on cohorts of children born in the early 1980s, while per-pupil education spending is drawn from the 1989-90 school year (which I changed from the time of my proposal). This year was selected because it aligns closely with the period during which these cohorts were in school, making it a more appropriate measure of the educational environment they experienced.
+
+#  Set-Up
+
+```{r}
+
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(knitr)
+
+df1 <- read_excel(
+  "~/Desktop/gov 51 /online_data_tables-4.xls",
+  sheet = "Online Data Table 4",
+  skip = 8
+)
+
+# Renaming column names because they didn't read in cleanly
+df1 <- df1 |>
+  rename(
+    msa_id = `-1`,
+    msa_name = `-2`,
+    state = `-3`,
+    n_children = `(4)`,
+    rank_rank_slope = `(5)`,
+    upward_mobility = `(6)`
+  )
+
+df1_state <- df1 |>
+  group_by(state) |>
+  summarize(mobility = mean(rank_rank_slope, na.rm = TRUE)) |>
+  filter(!grepl("-", state))
+
+
+df2 <- read_excel("~/Desktop/gov 51 /tabn194.xls", skip = 4, col_names = FALSE)
+
+df2 <- df2 |>
+  select(state = 1, spending = 5) |>
+  filter(!is.na(state), state != "United States") |>
+  mutate(
+    state = trimws(gsub("\\.+", "", state)),
+    state = ifelse(state == "District of Columbia", "DC", state),
+    state = ifelse(state == "DC", "DC", state.abb[match(state, state.name)]),
+    spending = as.numeric(spending) 
+  ) |>
+  filter(!is.na(state))
+
+df_merged <- df1 |>
+  left_join(df2, by = "state") |>
+  select(state, rank_rank_slope, spending)
+
+all_states <- state.abb
+
+
+```
+
+\newpage
+
+# Summary Statistics
+
+```{r}
+
+df_merged |>
+  summarize(
+mean_spending = mean(spending, na.rm = TRUE),
+    sd_spending = sd(spending, na.rm = TRUE),
+    min_spending = min(spending, na.rm = TRUE),
+    max_spending = max(spending, na.rm = TRUE),
+    
+    mean_mobility = mean(rank_rank_slope, na.rm = TRUE),
+    sd_mobility = sd(rank_rank_slope, na.rm = TRUE),
+    min_mobility = min(rank_rank_slope, na.rm = TRUE),
+    max_mobility = max(rank_rank_slope, na.rm = TRUE),
+    
+    n = n()
+  ) |>
+  kable(
+    digits = 2,
+    col.names = c(
+      "Mean Spending", "SD Spending", "Min Spending", "Max Spending",
+      "Mean Mobility", "SD Mobility", "Min Mobility", "Max Mobility",
+      "Observations"
+    ),
+    caption = "Summary Statistics (Table 1)"
+  )
+
+```
+
+Table 1 presents summary statistics for per-pupil spending and intergenerational mobility across commuting zones. On average, per-pupil spending is approximately \$2,170.93, with variation (SD is about \$478.59), ranging from \$1,574.44 to \$4,727.59.
+
+The mean rank-rank slope is 0.33, suggesting a moderate degree of persistence in income across generations, Mobility also varies across commuting zones, with values ranging from 0.18 to 0.43. Overall, these summary statistics indicate modest variation in both education spending and mobility.
+
+\newpage
+
+# Scatterplot
+
+```{r}
+
+northeast <- c("CT","ME","MA","NH","RI","VT","NJ","NY","PA")
+midwest   <- c("IL","IN","MI","OH","WI","IA","KS","MN","MO","NE","ND","SD")
+south     <- c("DE","FL","GA","MD","NC","SC","VA","DC","WV","AL","KY","MS","TN","AR","LA","OK","TX")
+west      <- c("AK","AZ","CA","CO","HI","ID","MT","NV","NM","OR","UT","WA","WY")
+
+df_merged <- df_merged |>
+  mutate(
+    region = case_when(
+      state %in% northeast ~ "Northeast",
+      state %in% midwest ~ "Midwest",
+      state %in% south ~ "South",
+      state %in% west ~ "West",
+      TRUE ~ NA_character_
+    )
+  )
+
+df_merged <- df_merged |>
+  filter(!is.na(region))
+
+ggplot(df_merged, aes(x = spending, y = rank_rank_slope, color = region)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Per-Pupil Spending",
+    y = "Rank-Rank Slope (Higher = Less Mobility)",
+    title = "School Spending and Intergenerational Mobility by Region"
+  )
+  
+  model <- lm(rank_rank_slope ~ spending, data = df_merged)
+summary(model)
+
+```
+
+> The scatterplot shows a weak overall relationship between per-pupil education spending and intergenerational mobility, with points widely dispersed across the range of spending levels. While some regional variation is visible, the trends are inconsistent: the South shows a slight negative relationship (higher spending associated with more mobility), while the Northeast and West exhibit slight positive trends (higher spending associated with less mobility). The Midwest is basically flat, indicating no "stickyness" between generations. These mixed patterns suggest that the relationship between spending and mobility is not consistent across regions and is generally weak.
+
+\newpage
+
+# Correlation
+
+```{r}
+
+
+cor(df_merged$spending, df_merged$rank_rank_slope, use = "complete.obs")
+
+```
+
+The correlation between per-pupil spending and the rank-rank slope is -0.135, indicating a very weak negative relationship. This suggests that higher spending is slightly associated with greater mobility (lower rank-rank slopes). However, the relationship remains small in magnitude, indicating that spending alone is not a strong predictor of mobility.
+
+\newpage
+
+# Linear Regression
+
+```{r}
+
+library(knitr)
+
+model <- lm(rank_rank_slope ~ spending, data = df_merged)
+
+kable(summary(model)$coefficients, digits = 4, caption = "Linear Regression Results")
+      
+```
+
+A simple linear regression shows a positive but extremely small relationship between per-pupil spending and the rank-rank slope. The coefficient is close to zero and statistically significant (p = 0.0137), indicating that there is no strong evidence of a relationship between spending and intergenerational mobility in this sample.
