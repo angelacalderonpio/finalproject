@@ -22,7 +22,7 @@ library(dplyr)
 library(knitr)
 
 df1 <- read_excel(
-  "online_data_tables-4.xls",
+  "data/raw/online_data_tables-4.xls",
   sheet = "Online Data Table 4",
   skip = 8
 )
@@ -44,7 +44,7 @@ df1_state <- df1 |>
   filter(!grepl("-", state))
 
 
-df2 <- read_excel("tabn194.xls", skip = 4, col_names = FALSE)
+df2 <- read_excel("data/raw/tabn194.xls", skip = 4, col_names = FALSE)
 
 df2 <- df2 |>
   select(state = 1, spending = 5) |>

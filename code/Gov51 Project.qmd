@@ -4,7 +4,7 @@ author: "Angela Calderon Pio"
 format: pdf
 ---
 
-# Preliminary RQ: 
+# Preliminary RQ:
 
 How is state-level per-pupil education spending in 1989-90 associated with intergenerational income mobility across U.S. commuting zones?
 
@@ -12,7 +12,7 @@ This research question has been refined from the initial proposal to better refl
 
 Additionally, this analysis combines data from different sources that are measured at different points in time. Intergenerational mobility estimates are based on cohorts of children born in the early 1980s, while per-pupil education spending is drawn from the 1989-90 school year (which I changed from the time of my proposal). This year was selected because it aligns closely with the period during which these cohorts were in school, making it a more appropriate measure of the educational environment they experienced.
 
-#  Set-Up
+# Set-Up
 
 ```{r}
 
@@ -20,10 +20,12 @@ library(ggplot2)
 library(readxl)
 library(dplyr)
 library(knitr)
+library(readxl)
 
-df1 <- read_excel(
-  "online_data_tables-4.xls",
-  sheet = "Online Data Table 4",
+
+df1 <- readxl::read_excel(
+  "/cloud/project/data/raw/online_data_tables-4.xls",
+  sheet = 5,
   skip = 8
 )
 
@@ -44,7 +46,11 @@ df1_state <- df1 |>
   filter(!grepl("-", state))
 
 
-df2 <- read_excel("tabn194.xls", skip = 4, col_names = FALSE)
+df2 <- readxl::read_excel(
+  "/cloud/project/data/raw/tabn194.xls",
+  skip = 4,
+  col_names = FALSE
+)
 
 df2 <- df2 |>
   select(state = 1, spending = 5) |>
