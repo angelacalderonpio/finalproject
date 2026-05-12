@@ -21,6 +21,7 @@ library(readxl)
 library(dplyr)
 library(knitr)
 library(readxl)
+library(tidyr)
 
 
 df1 <- readxl::read_excel(
@@ -72,8 +73,6 @@ all_states <- state.abb
 
 ```
 
-\newpage
-
 # Summary Statistics
 
 ```{r}
@@ -108,9 +107,7 @@ Table 1 presents summary statistics for per-pupil spending and intergenerational
 
 The mean rank-rank slope is 0.33, suggesting a moderate degree of persistence in income across generations, Mobility also varies across commuting zones, with values ranging from 0.18 to 0.43. Overall, these summary statistics indicate modest variation in both education spending and mobility.
 
-\newpage
-
-# Scatterplot
+# Figure 1
 
 ```{r}
 
@@ -151,6 +148,55 @@ summary(model)
 
 \newpage
 
+# Figure 2
+
+```{r}
+
+df_merged |>
+  filter(!is.na(spending), !is.na(rank_rank_slope)) |>
+  mutate(
+    spending_group = ntile(spending, 4),
+    spending_group = factor(
+      spending_group,
+      levels = c(1, 2, 3, 4),
+      labels = c("Lowest spending", "Low-middle", "High-middle", "Highest spending")
+    )
+  ) |>
+  group_by(spending_group) |>
+  summarize(
+    Mean = mean(rank_rank_slope, na.rm = TRUE),
+    Median = median(rank_rank_slope, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = c(Mean, Median),
+    names_to = "Statistic",
+    values_to = "mobility"
+  ) |>
+  ggplot(aes(x = spending_group, y = mobility, fill = Statistic)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c(
+    "Mean" = "#b6a0e3",
+    "Median" = "#4b3f72"
+  )) +
+  scale_x_discrete(labels = c(
+    "Lowest\nspending",
+    "Low-middle",
+    "High-middle",
+    "Highest\nspending"
+  )) +
+  labs(
+    x = "Per-Pupil Spending Group",
+    y = "Rank-Rank Slope\n(Higher = Less Mobility)",
+    fill = "Statistic",
+    title = "Mobility Patterns Are Uneven Across Spending Groups"
+  )
+
+
+```
+
+Figure 2 groups commuting zones into four spending categories: lowest, low-middle, high-middle, and highest spending. Then, I compare their average rank-rank slopes. If higher spending were strongly associated with greater mobility, the bars would fall steadily as spending increases, since lower rank-rank slopes mean more mobility. Instead, the pattern is uneven. The high-middle spending group has the lowest average rank-rank slopes, but the highest spending group **does not** continue that decline. This suggests that spending is related to mobility only weakly and that higher spending alone is not associated with better mobility outcomes. I include the median because averages can be affected by skew of extreme values, so the median gives a better sense.
+
 # Correlation
 
 ```{r}
@@ -162,18 +208,18 @@ cor(df_merged$spending, df_merged$rank_rank_slope, use = "complete.obs")
 
 The correlation between per-pupil spending and the rank-rank slope is -0.135, indicating a very weak negative relationship. This suggests that higher spending is slightly associated with greater mobility (lower rank-rank slopes). However, the relationship remains small in magnitude, indicating that spending alone is not a strong predictor of mobility.
 
-\newpage
-
 # Linear Regression
 
 ```{r}
 
-library(knitr)
+model <- lm(rank_rank_slope ~ spending_1000, data = df_merged)
 
-model <- lm(rank_rank_slope ~ spending, data = df_merged)
-
-kable(summary(model)$coefficients, digits = 4, caption = "Linear Regression Results")
+kable(
+  summary(model)$coefficients,
+  digits = 4,
+  caption = "Linear Regression of Intergenerational Mobility on Per-Pupil Spending"
+)
       
 ```
 
-A simple linear regression shows a positive but extremely small relationship between per-pupil spending and the rank-rank slope. The coefficient is close to zero and statistically significant (p = 0.0137), indicating that there is no strong evidence of a relationship between spending and intergenerational mobility in this sample.
+A simple linear regression shows a negative but small relationship between per-pupil spending and the rank-rank slope. Because spending is measured in thousands of dollars here, the coefficient means that each additional \$1,000 in per-pupil spending is associated with a 0.0158 decrease in the rank-rank slope. Since higher rank-rank slopes mean less mobility. This points in the expect direction: higher spending is associated with slightly greater mobility. However, the size of the coefficient is still modest, so the result should be interpreted as a weak association, not as strong evidence that spending itself explains mobility differences across commuting zones.
