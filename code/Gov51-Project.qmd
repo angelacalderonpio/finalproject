@@ -1,0 +1,372 @@
+---
+title: "School Spending and Intergenerational Mobility"
+subtitle: "A Descriptive Analysis Across U.S. Commuting Zones"
+author: "Angela Calderon Pio"
+format: pdf
+---
+
+https://github.com/angelacalderonpio/finalproject
+
+Submitted May 12, 2026 with an approved 24-hour extension.
+
+# Introduction
+
+Education is often treated as one of the clearest ways to expand opportunity (Duncan and Murnane), particularly for children of low-income backgrounds. The mechanism, a straightforward one, dictates that schools with more resources should be better able to support students, and stronger schools should help weaken the connection between the economic position a child is born into and the economic position they reach as an adult. In this view, school spending is both an education issue and a mobility issue.
+
+This raises a broader empirical question: do higher-spending places actually show greater economic mobility in the data?
+
+This paper asks **how state-level per-pupil education spending is associated with intergenerational mobility across U.S. commuting zones**. Although mobility is measured at the commuting-zone level, spending is measured at the state level and assigned to each commuting zone based on its state. For that reason, this project is a descriptive analysis, not a precise estimate of school spending within each local area.
+
+To answer this question, I combine Opportunity Insights data on intergenerational mobility with per-pupil spending data from the National Center for Education Statistics. I describe in more precise details both datasets in the next section.
+
+I treat this as a descriptive study rather than a causal one. The goal is not to prove that spending causes mobility to rise or fall. Instead, this paper asks whether higher-spending places tend to show different mobility patterns than lower-spending places. The analysis uses summary statistics, visualizations, correlation, and regression with region included as a control.
+
+The results suggest that the relationship between spending and mobility is weaker and less consistent than the simplest opportunity-based argument would suggest. The raw correlation points in the expected direction, but the relationship is small. Once region is included, the spending coefficient is not statistically significant. Overall, the findings suggest that spending alone does not explain why some places exhibit greater intergenerational mobility than others.
+
+# Data
+
+This project combines two main sources of data. The first is Opportunity Insights data on intergenerational mobility. The second is the National Education for Education Statistics (NCES) data on per-pupil education spending. The first data set involves a cohort of children born in the early 1980s, and their family's income versus their incomes as adults. The second data set is per-pupil education spending from the 1989-90 school year, a year that would be relevant to the children of the first data set. After merging the data sets, the unit of observation is the commuting zone, resulting in a sample of 381 commuting zones.
+
+The outcome variable is the rank-rank slope. This variable measures how strongly a child's adult income rank is associated with their parent's income rank. Higher rank-rank slopes indicate greater income persistence across generations, meaning that parental income is more predictive of where children end up economically as adults. Lower rank-rank slopes indicate greater mobility because children's adult outcomes are less tied to their parents' income rank.
+
+The main independent variable is per-pupil education spending. Because the spending data are measured at the state level, each commuting zone is assigned the spending value of its state. This allows for broad comparison across places, although it introduces an important limitation because spending can vary within states.
+
+Region is also included in visualizations in order to compare patterns across different parts of the country.
+
+## Measurement Choice
+
+A key part of this project is the use of rank-rank slope as the measure of intergenerational mobility. This measure is useful because it captures, as briefly described above, how strongly children's adult income ranks are tied to their parents' income ranks (or "stickiness"). 
+
+Mobility can be an abstract concept but rank-rank slope turns that concept into a measurable relationship across places. Since this project compares commuting zones, the measure allows me to ask whether the strength of income persistence differs across local labor-market areas. 
+
+At the same time, it is only one way to measure mobility. It captures relative mobility, so it does not directly measure every dimension of opportunity, such as absolute income gains or educational attainment. Therefore, the results should be interpreted as evidence about one specific dimension of intergenerational mobility.
+
+# Analysis
+
+The analysis examines the relationship between per-pupil education spending and intergenerational mobility in four ways. First, I use a scatter plot to visualize the overall relationship between spending and the rank-rank slope. Second, I group commuting zones into spending categories and compare their average and median mobility outcomes. Third, I calculate the correlation between spending and mobility. Finally, I estimate a simple OLS regression of rank-rank slope on spending.
+
+Because this is a descriptive project, the regression results should be interpreted as **associations rather than causal effects**.
+
+
+```{r}
+#| include: false
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+library(broom)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(knitr)
+library(readxl)
+library(tidyr)
+
+
+df1 <- readxl::read_excel(
+  "/cloud/project/data/raw/online_data_tables-4.xls",
+  sheet = 5,
+  skip = 8
+)
+
+# Renaming column names because they didn't read in cleanly
+
+df1 <- df1 |>
+  rename(
+    msa_id = `-1`,
+    msa_name = `-2`,
+    state = `-3`,
+    n_children = `(4)`,
+    rank_rank_slope = `(5)`,
+    upward_mobility = `(6)`
+  )
+
+df1_state <- df1 |>
+  group_by(state) |>
+  summarize(mobility = mean(rank_rank_slope, na.rm = TRUE)) |>
+  filter(!grepl("-", state))
+
+
+df2 <- readxl::read_excel(
+  "/cloud/project/data/raw/tabn194.xls",
+  skip = 4,
+  col_names = FALSE
+)
+
+df2 <- df2 |>
+  select(state = 1, spending = 5) |>
+  filter(!is.na(state), state != "United States") |>
+  mutate(
+    state = trimws(gsub("\\.+", "", state)),
+    state = ifelse(state == "District of Columbia", "DC", state),
+    state = ifelse(state == "DC", "DC", state.abb[match(state, state.name)]),
+    spending = as.numeric(spending) 
+  ) |>
+  filter(!is.na(state))
+
+df_merged <- df1 |>
+  left_join(df2, by = "state") |>
+  select(state, rank_rank_slope, spending)
+
+all_states <- state.abb
+
+
+```
+
+## Summary Statistics
+
+```{r}
+
+df_merged |>
+  summarize(
+mean_spending = mean(spending, na.rm = TRUE),
+    sd_spending = sd(spending, na.rm = TRUE),
+    min_spending = min(spending, na.rm = TRUE),
+    max_spending = max(spending, na.rm = TRUE),
+    
+    mean_mobility = mean(rank_rank_slope, na.rm = TRUE),
+    sd_mobility = sd(rank_rank_slope, na.rm = TRUE),
+    min_mobility = min(rank_rank_slope, na.rm = TRUE),
+    max_mobility = max(rank_rank_slope, na.rm = TRUE),
+    
+    n = n()
+  ) |>
+  kable(
+    digits = 2,
+    col.names = c(
+      "Mean Spending", "SD Spending", "Min Spending", "Max Spending",
+      "Mean Mobility", "SD Mobility", "Min Mobility", "Max Mobility",
+      "Observations"
+    ),
+    caption = "Summary Statistics (Table 1)"
+  )
+
+```
+
+Table 1 reports summary statistics for per-pupil spending and intergenerational mobility across commuting zones, the two main variables. On average, per-pupil spending is approximately \$2,170.93, with variation (SD is about \$478.59), ranging from \$1,574.44 to \$4,727.59.
+
+The mean rank-rank slope is 0.33, suggesting a moderate degree of persistence in income across generations. Since higher values indicate less mobility, this means that parent income remains meaningfully associated with child income outcomes in the average commuting zone.
+
+The table also demonstrates substantial variation across commuting zones, with values ranging from 0.18 to 0.43 in rank-rank slope. This variation is important because the project depends on comparing education spending levels and different mobility outcomes.
+
+## Figure 1
+
+```{r}
+#| echo: false
+#| results: hide
+
+northeast <- c("CT","ME","MA","NH","RI","VT","NJ","NY","PA")
+midwest   <- c("IL","IN","MI","OH","WI","IA","KS","MN","MO","NE","ND","SD")
+south     <- c("DE","FL","GA","MD","NC","SC","VA","DC","WV","AL","KY","MS","TN","AR","LA","OK","TX")
+west      <- c("AK","AZ","CA","CO","HI","ID","MT","NV","NM","OR","UT","WA","WY")
+
+df_merged <- df_merged |>
+  mutate(
+    region = case_when(
+      state %in% northeast ~ "Northeast",
+      state %in% midwest ~ "Midwest",
+      state %in% south ~ "South",
+      state %in% west ~ "West",
+      TRUE ~ NA_character_
+    )
+  )
+
+df_merged <- df_merged |>
+  filter(!is.na(region))
+
+ggplot(df_merged, aes(x = spending, y = rank_rank_slope, color = region)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Per-Pupil Spending",
+    y = "Rank-Rank Slope (Higher = Less Mobility)",
+    title = "School Spending and Intergenerational Mobility by Region"
+  )
+  
+  model <- lm(rank_rank_slope ~ spending, data = df_merged)
+summary(model)
+
+```
+
+Figure 1 shows the relationship between per-pupil spending and the rank-rank slope across commuting zones. If higher spending were strongly associated with greater mobility, the points would show a clearer downward trend (because lower rank-rank slopes indicate more mobility). Instead, the overall pattern appears to slope slightly upward, meaning that higher spending is associated with a higher rank-rank slope. Since higher rank-rank slopes indicate less mobility, this goes against the original expectation that higher spending would be associated with greater mobility.
+
+At the same time, the relationship is not especially strong: points are dispersed, and commuting zones with similar spending levels often have different rank-rank slopes. So, it seems that spending alone does not explain much of the variation in mobility outcomes.
+
+The regional trend lines also suggest that the relationship differs across parts of the country rather than following one uniform national pattern. And while the slopes of the two variables are positive (with the exception of the South, interestingly) they do so at varying strengths.
+
+This figure is important because it complicates the initial intuition behind the project. As aforementioned, a scatter plot confirming my initial impulse (that higher spending is associated with lower rank-rank slopes), we'd be seeing a much different picture. Instead, the graph might suggest that higher-spending places may also be places where income advantages are more persistent across generations. That does not mean spending causes lower mobility, but perhaps suggests that spending may be correlated with other features of wealth that shape mobility.
+
+## Figure 2
+
+```{r}
+
+df_merged |>
+  filter(!is.na(spending), !is.na(rank_rank_slope)) |>
+  mutate(
+    spending_group = ntile(spending, 4),
+    spending_group = factor(
+      spending_group,
+      levels = c(1, 2, 3, 4),
+      labels = c("Lowest spending", "Low-middle", "High-middle", "Highest spending")
+    )
+  ) |>
+  group_by(spending_group) |>
+  summarize(
+    Mean = mean(rank_rank_slope, na.rm = TRUE),
+    Median = median(rank_rank_slope, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = c(Mean, Median),
+    names_to = "Statistic",
+    values_to = "mobility"
+  ) |>
+  ggplot(aes(x = spending_group, y = mobility, fill = Statistic)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_fill_manual(values = c(
+    "Mean" = "#b6a0e3",
+    "Median" = "#4b3f72"
+  )) +
+  scale_x_discrete(labels = c(
+    "Lowest\nspending",
+    "Low-middle",
+    "High-middle",
+    "Highest\nspending"
+  )) +
+  labs(
+    x = "Per-Pupil Spending Group",
+    y = "Rank-Rank Slope\n(Higher = Less Mobility)",
+    fill = "Statistic",
+    title = "Mobility Patterns Are Uneven Across Spending Groups"
+  )
+
+
+```
+
+Figure 2 compares the mean and median rank-rank slope across four per-pupil spending groups. I grouped commuting zones into quartiles based on per-pupil education spending. In practice, this means that the "lowest spending" group contains the bottom quarter of commuting zones by spending, while the "highest spending" group contains the top quarter. I include median because averages can be affected by skew or extreme values, so the median provides a better sense of the typical commuting zone within each group.
+
+The graph yields mixed results. While the first three bars seem to match the simple hypothesis that higher spending is strongly associated with lower rank-rank slopes, it is important to note that the highest-spending group has a relatively high rank-rank slope, meaning less mobility. Thus, it suggests that high spending does not necessarily mean that children's adult outcomes are less tied to their parents' income.
+
+One possible interpretation is that some high-spending areas are also places where family advantages matter. That is, wealthier communities may also spend more on education, but they may also have housing markets, school boundaries, social networks, and labor-market advantages that help children from higher-income families remain high-income adults. This emphasizes the role of social capital that the literature surrounding this broader topic hopes to expand towards other income groups in order to bolster adult incomes (Chetty et. al). So, high spending can coexist with high income persistence. Again, this graph supports a broader point that spending alone isn't enough to explain mobility outcomes.
+
+## Correlation
+
+```{r}
+
+
+cor(df_merged$spending, df_merged$rank_rank_slope, use = "complete.obs")
+
+```
+
+The correlation between per-pupil spending and the rank-rank slope is -0.135. The negative sign suggests that, before accounting for region, higher spending is weakly associated with lower rank-rank slopes, or greater mobility. However, the magnitude of the relationship is small, indicating only a weak association between spending and mobility across commuting zones.
+
+This relationship should only be interpreted cautiously because it reflects only the raw bivariate association between spending and mobility. Once region is included in the regression model below, the spending coefficient changes direction and becomes statistically insignificant. This suggests that part of the original correlation may reflect broader regional patterns rather than a stable relationship between spending and mobility itself. 
+
+## Linear Regression
+
+```{r}
+df_merged <- df_merged |>
+  mutate(
+    region = case_when(
+      state %in% c("CT", "ME", "MA", "NH", "RI", "VT", "NJ", "NY", "PA") ~ "Northeast",
+      state %in% c("IL", "IN", "MI", "OH", "WI", "IA", "KS", "MN", "MO", "NE", "ND", "SD") ~ "Midwest",
+      state %in% c("DE", "FL", "GA", "MD", "NC", "SC", "VA", "DC", "WV",
+                   "AL", "KY", "MS", "TN", "AR", "LA", "OK", "TX") ~ "South",
+      state %in% c("AZ", "CO", "ID", "MT", "NV", "NM", "UT", "WY",
+                   "AK", "CA", "HI", "OR", "WA") ~ "West",
+      TRUE ~ NA_character_
+    )
+  )
+
+#| echo: false
+
+df_reg <- df_merged |>
+  mutate(spending_1000 = spending / 1000) |>
+  filter(!is.na(rank_rank_slope), !is.na(spending_1000), !is.na(region))
+
+model1 <- lm(rank_rank_slope ~ spending_1000, data = df_reg)
+model2 <- lm(rank_rank_slope ~ spending_1000 + region, data = df_reg)
+
+reg_table <- broom::tidy(model2) |>
+  mutate(
+    term = recode(
+      term,
+      "(Intercept)" = "Constant",
+      "spending_1000" = "Per-Pupil Spending ($1,000s)",
+      "regionNortheast" = "Northeast",
+      "regionSouth" = "South",
+      "regionWest" = "West"
+    )
+  ) |>
+  select(term, estimate, std.error, statistic, p.value)
+
+knitr::kable(
+  reg_table,
+  digits = 4,
+  caption = "Regression of Rank-Rank Slope on Per-Pupil Spending with Region Controls",
+  col.names = c("Variable", "Estimate", "Std. Error", "t value", "p value")
+)
+
+```
+
+Table 2 reports a linear regression of rank-rank slope on per-pupil spending with region included as a descriptive control. Midwest is the omitted reference category, so the Northeast, South, and West coefficients represent differences relative to the Midwest. Including region allows the model to account for broad geographic differences in both education spending and mobility patterns.
+
+Once region is included, the coefficient on per-pupil spending becomes positive and statistically insignificant. Substantively, the estimate suggests that each additional \$1,000 in per-pupil spending is associated with about a 0.0085 increase in the rank-rank slope. Since higher rank-rank slopes indicate less mobility, this points in the opposite direction of the original expectation that higher spending would be associated with greater mobility. However, the coefficient is not statistically significant (p = 0.193), meaning the model does not provide strong evidence of a clear relationship between spending and mobility after accounting for region.
+
+And similar to the scatter plot, the regional coefficients suggest that broad geographic context matters more consistently than spending alone. The West shows a substantially lower rank-rank slope relative to the Midwest, indicating greater mobility, and this relationship is statistically significant. The Northeast and South coefficients are smaller and not statistically significant. Overall the regression suggests that once regional differences are considered, per-pupil spending alone does not appear to have a strong or consistent relationship with intergenerational mobility across commuting zones.
+
+## Regional Mean Rank-Rank Table
+
+```{r}
+#| echo: false
+
+region_summary <- df_reg |>
+  group_by(region) |>
+  summarize(
+    mean_spending = mean(spending, na.rm = TRUE),
+    mean_rank_rank = mean(rank_rank_slope, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+knitr::kable(
+  region_summary,
+  digits = 2,
+  caption = "Average Spending and Rank-Rank Slope by Region",
+  col.names = c("Region", "Mean Spending", "Mean Rank-Rank Slope")
+)
+
+```
+Table 3 reports average per-pupil spending and average rank-rank slope by region. Regions differ not only in spending levels, but also in average mobility patterns. This supports the earlier conclusion that geographic context may shape the observed relationship between spending and mobility more consistently than spending by itself.
+
+Although region is a broad category, this table helps show why including region changes the regression results. The Northeast has the highest average spending, but its average rank-rank slope is close to the Midwest. The West, by contrast, has much lower average rank-rank slopes even though its average spending is not the highest. This suggests that regional mobility patterns are not simply tracking spending levels. Instead, broad geographic context appears to matter in ways that spending alone does not capture.
+
+# Limitations & Conclusion
+
+## Limitations
+
+This analysis has several limitations. First, the project is descriptive so it **cannot establish** that spending **causes** mobility to rise or fall. In other words, the results show associations not causal effects. Second, spending is measured at the state level and assigned to commuting zones, which means the analysis does not capture local district-level differences in school funding. Third, region is a broad control. It helps account for large geographic differences, but importantly also hides variation between states within the same region. Finally, the model does not include important housing costs, segregation, and other variables that might shape intergenerational mobility; this might contribute to omitted variable bias if these factors are correlated with both spending and mobility. Practically, this would mean that the coefficient on spending may partly be reflecting those omitted conditions rather than the independent relationship between school spending and mobility. For that reason, the regression should be interpreted as descriptive rather than causal.
+
+
+## Conclusion
+
+This paper examined how state-level per-pupil education spending is 
+associated with intergenerational mobility across U.S. commuting zones. The central finding is that the relationship exists, but it is weak and not especially consistent. The raw correlation suggests that higher spending is associated with lower rank-rank slopes, or slightly greater mobility. However, once region is included in the regression, the spending coefficient becomes statistically insignificant.
+
+The results do not support a simple story where higher education spending automatically corresponds to greater mobility. The spending-group graph (Figure 2) also complicates that expectation with the spending groups: whereas the first three move roughly in the expected direction, the highest-spending group has relatively high rank-rank slope. This suggests that higher spending does not necessarily mean children's adult outcomes are less tied to their parents' income.
+
+The regional results further underscore the importance of broad context. The West and Northeast especially stand out because the former has the lowest rank-rank slope out of the regions, but the latter has the highest average spending. Geographic context may shape the observed relationship between spending and mobility.
+
+In short, the main takeaway is that school spending may matter, but it is not the whole story. Across commuting zones, the relationship between state-level per-pupil spending and intergenerational mobility is not straightforward. The question is not only whether places spend more, but whether spending is connected to broader local and regional conditions that shape mobility.
+
+# References
+
+Murnane, Richard J. and Greg J. Duncan. Whither Opportunity? Rising Inequality, Schools, and Children's Life Chances. 1 ed. Russell Sage Foundation, 2011. Project MUSE, https://muse.jhu.edu/book/26993.
+
+“National Public Education Financial Survey Data, v.1b—Revised.” National Center for Education Statistics, NCES, nces.ed.gov/ccd/files.asp#Fiscal:1,LevelId:2,SchoolYearId:4, Page:1. Accessed 12 May 2026. 
+
+Raj Chetty et al., Opportunity Insights, “Changing Opportunity: How Changes in Children’s Social Environments Have Increased Class Gaps and Reduced Racial Gaps in Economic Mobility,” (July 2024).
+
+Opportunity Insights. Geography of Mobility: Commuting Zone Intergenerational Mobility Statistics. Opportunity Insights, https://opportunityinsights.org/data/. Accessed 15 Apr. 2026.
