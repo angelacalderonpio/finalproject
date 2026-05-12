@@ -1,6 +1,0 @@
-"0",""
-"0","library(knitr)"
-"0",""
-"0","model <- lm(rank_rank_slope ~ spending, data = df_merged)"
-"0",""
-"0","kable(summary(model)$coefficients, digits = 4, caption = ""Linear Regression Results"")"

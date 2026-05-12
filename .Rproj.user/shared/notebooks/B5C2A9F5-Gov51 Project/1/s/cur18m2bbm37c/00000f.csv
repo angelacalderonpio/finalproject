@@ -1,7 +1,0 @@
-"0",""
-"0",""
-"0","cor(df_merged$spending, df_merged$rank_rank_slope, use = ""complete.obs"")"
-"1","[1]"
-"1"," -0.1347513"
-"1","
-"

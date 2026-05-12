@@ -4,15 +4,38 @@ author: "Angela Calderon Pio"
 format: pdf
 ---
 
-# Preliminary RQ:
+https://github.com/angelacalderonpio/finalproject
 
-How is state-level per-pupil education spending in 1989-90 associated with intergenerational income mobility across U.S. commuting zones?
+# Introduction
 
-This research question has been refined from the initial proposal to better reflect the structure of the data. While the original question focused on state-level comparisons, the analysis uses commuting zones as the primary unit of observation, with state-level spending assigned to each zone.
+Education is often treated as one of the clearest ways to expand opportunity (Duncan and Murnane), particularly for children of low-income backgrounds. The mechanism, a straightforward one, dictates that schools that spend more per-pupil will have with more resources, which in turn better supports students. The implication in this mechanism is that stronger schools should help students move beyond the economic position they were born into. This idea is especially important for low-income students, since public education is often perceived as one of the main institutions through which the connection between family background ans adult outcomes is weakened.
 
-Additionally, this analysis combines data from different sources that are measured at different points in time. Intergenerational mobility estimates are based on cohorts of children born in the early 1980s, while per-pupil education spending is drawn from the 1989-90 school year (which I changed from the time of my proposal). This year was selected because it aligns closely with the period during which these cohorts were in school, making it a more appropriate measure of the educational environment they experienced.
+But this raises an empirical question: do schools that spend more per pupil *actually* show more economic mobility?
 
-# Set-Up
+This paper examines how strongly per-pupil education spending is **associated** with intergenerational mobility across U.S. commuting zones. I treat this as a descriptive study rather than a causal one: the goal isn't to prove that spending causes mobility, but ask whether higher-spending places tend to show lower income persistence across generations. The objective is to lend preliminary evidence in the body of literature surrounding this matter. 
+
+To answer this question, I combine data from Opportunity Insights on intergenerational mobility with per-pupil spending data from the National Center for Education Statistics. The analysis uses commuting zones as the unit of observation, allowing comparisons across local labor-market areas throughout the United States.
+
+The results suggest that higher per-pupil spending is associated with slightly greater mobility, but the relationship is tenuous. The scatterplot shows a dispersed pattern rather than a clear trend (Figuere 1), the spending-group graph (Figure 2) does not show consistent improvement as spending eises, and the regression coefficient is statistically significant but small. Overall, the evidence suggests that spending may matter, but spending alone does not explain why some places show more mobility than others.
+
+# Data 
+
+This project combines two main sources of data. The first is Opportunity Insights data on intergenerational mobility. The second is the National Education for Education Statistics (NCES) data on per-pupil education spending. The first dataset involves a cohort of children born in the early 1980s, and their family's income versus their incomes as adults. The second dataset is per-pupil education spending from the 1989-90 school year, a year that would be relevant to the children of the first dataset. After merging the datasets, the unit of observation is the commuting zone, resulting in a sample of 381 commuting zones.
+
+The outcome variable is the rank-rank slope. This variable measures how strongly a child's adult income rank is associated with their parent's income rank. Higher rank-rank slopes indicate greater income persistence across generations, meaning that parental income is more predictive of where children end up economically as adults. Lower rank-rank slopes indicate greater mobility because children's adult outcomes are less tied to their parents' income rank.
+
+The main independent variable is per-pupil education spending. Because the spending data are measured at the state level, each commuting zone is assigned the spending value of its state. This allows for broad comparison across places, although it introduces an important limitation because spending can vary within states.
+
+Region is also included in visualizations in order to compare patterns across different parts of the country.
+
+
+# Analysis
+
+The analysis examines the relationship between per-pupil education spending and intergenerational mobility in four ways. First, I use a scatter plot to visualize the overall relationship between spending and the rank-rank slope. Second, I group commuting zones into spending categories and compare their average and median mobility outcomes. Third, I calculate the correlation between spending and mobility. Finally, I estimate a simple OLS regression of rank-rank slope on spending.
+
+Because this is a descriptive project, the regression results should be interpreted as **associations rather than causal effects**.
+
+## Set-up
 
 ```{r}
 
@@ -31,6 +54,7 @@ df1 <- readxl::read_excel(
 )
 
 # Renaming column names because they didn't read in cleanly
+
 df1 <- df1 |>
   rename(
     msa_id = `-1`,
@@ -73,7 +97,7 @@ all_states <- state.abb
 
 ```
 
-# Summary Statistics
+## Summary Statistics
 
 ```{r}
 
@@ -103,11 +127,13 @@ mean_spending = mean(spending, na.rm = TRUE),
 
 ```
 
-Table 1 presents summary statistics for per-pupil spending and intergenerational mobility across commuting zones. On average, per-pupil spending is approximately \$2,170.93, with variation (SD is about \$478.59), ranging from \$1,574.44 to \$4,727.59.
+Table 1 reports summary statistics for per-pupil spending and intergenerational mobility across commuting zones, the two main variables. On average, per-pupil spending is approximately \$2,170.93, with variation (SD is about \$478.59), ranging from \$1,574.44 to \$4,727.59.
 
-The mean rank-rank slope is 0.33, suggesting a moderate degree of persistence in income across generations, Mobility also varies across commuting zones, with values ranging from 0.18 to 0.43. Overall, these summary statistics indicate modest variation in both education spending and mobility.
+The mean rank-rank slope is 0.33, suggesting a moderate degree of persistence in income across generations. Since higher values indicate less mobility, this means that parent income remains meaningfully associated with child income outcomes in the average commuting zone.
 
-# Figure 1
+The table also demonstrates substantial variation across commuting zones, with values ranging from 0.18 to 0.43 in rank-rank slope. This variation is important because the project depends on comparing education spending levels and different mobility outcomes
+
+## Figure 1
 
 ```{r}
 
@@ -144,11 +170,14 @@ summary(model)
 
 ```
 
-> The scatterplot shows a weak overall relationship between per-pupil education spending and intergenerational mobility, with points widely dispersed across the range of spending levels. While some regional variation is visible, the trends are inconsistent: the South shows a slight negative relationship (higher spending associated with more mobility), while the Northeast and West exhibit slight positive trends (higher spending associated with less mobility). The Midwest is basically flat, indicating no "stickyness" between generations. These mixed patterns suggest that the relationship between spending and mobility is not consistent across regions and is generally weak.
+Figure 1 shows the relationship between per-pupil spending and the rank-rank slope across commuting zones. OveIf higher spending were strongly associated with greater mobility, the points would show a clearer downward trend (because lower rank-rank slopes indicate more mobility). Instead, points are widely dispersed across the regions.
+
+While some higher-spending places appear to have lower rank-rank slopes (such as the South, interestingly), the 
+The scatterplot shows a weak overall relationship between per-pupil education spending and intergenerational mobility, with points widely dispersed across the range of spending levels. While some regional variation is visible, the trends are inconsistent: the South shows a slight negative relationship (higher spending associated with more mobility), while the Northeast and West exhibit slight positive trends (higher spending associated with less mobility). The Midwest is basically flat, indicating no "stickyness" between generations. These mixed patterns suggest that the relationship between spending and mobility is not consistent across regions and is generally weak.
 
 \newpage
 
-# Figure 2
+## Figure 2
 
 ```{r}
 
@@ -195,9 +224,13 @@ df_merged |>
 
 ```
 
-Figure 2 groups commuting zones into four spending categories: lowest, low-middle, high-middle, and highest spending. Then, I compare their average rank-rank slopes. If higher spending were strongly associated with greater mobility, the bars would fall steadily as spending increases, since lower rank-rank slopes mean more mobility. Instead, the pattern is uneven. The high-middle spending group has the lowest average rank-rank slopes, but the highest spending group **does not** continue that decline. This suggests that spending is related to mobility only weakly and that higher spending alone is not associated with better mobility outcomes. I include the median because averages can be affected by skew of extreme values, so the median gives a better sense.
+Figure 2 compares the mean and median rank-rank slope across four per-pupil spending groups. I include median because averages can be affected by skew or extrmee values, so the median provides a better sense of the typical commuting zone within each group. I geoup commuting zones into four spending categories: lowest, low-middle, high-middle, and highest spending. Then, I compare their average rank-rank slopes. 
 
-# Correlation
+If higher spending were strongly associated with greater mobility, both the mean and median bars would fall steadily as spending increases. Instead, the pattern is uneven. The high-middle spending group has the lowest average rank-rank slopes, but the highest spending group **does not** continue that trend. 
+
+This suggests that spending is associated with mobility only weakly and that higher spending alone is not associated with better mobility outcomes across commuting zones. 
+
+## Correlation
 
 ```{r}
 
@@ -206,20 +239,47 @@ cor(df_merged$spending, df_merged$rank_rank_slope, use = "complete.obs")
 
 ```
 
-The correlation between per-pupil spending and the rank-rank slope is -0.135, indicating a very weak negative relationship. This suggests that higher spending is slightly associated with greater mobility (lower rank-rank slopes). However, the relationship remains small in magnitude, indicating that spending alone is not a strong predictor of mobility.
+The correlation between per-pupil spending and the rank-rank slope is -0.135. The negative sign points in the expected direction. Since lower rank-rank indicates greater mobility, the result suggests that higher spending per-pupil is associated with slightly greater mobility.
 
-# Linear Regression
+However, the magnitude of the relationship is small. A correlation of -0.135 indicates only a weak association between spending and mobility. This reiterates the earlier visual evidence from the scatterplot and spending-group graph, both of which showed a dispersed relationship.
+
+## Linear Regression
 
 ```{r}
 
-model <- lm(rank_rank_slope ~ spending_1000, data = df_merged)
+model <- df_merged |>
+  mutate(spending_1000 = spending / 1000) |>
+  lm(rank_rank_slope ~ spending_1000, data = _)
 
-kable(
+knitr::kable(
   summary(model)$coefficients,
   digits = 4,
   caption = "Linear Regression of Intergenerational Mobility on Per-Pupil Spending"
-)
-      
-```
+) 
 
-A simple linear regression shows a negative but small relationship between per-pupil spending and the rank-rank slope. Because spending is measured in thousands of dollars here, the coefficient means that each additional \$1,000 in per-pupil spending is associated with a 0.0158 decrease in the rank-rank slope. Since higher rank-rank slopes mean less mobility. This points in the expect direction: higher spending is associated with slightly greater mobility. However, the size of the coefficient is still modest, so the result should be interpreted as a weak association, not as strong evidence that spending itself explains mobility differences across commuting zones.
+```
+Table 2 reports a simple linear regression of rank-rank slope on per-pupil spending, measured in thousands of dollars. Measuring spending in thousands makes the coefficient easier to interpret substantively. 
+
+The coefficient on spending is negative, meaning that higher per-pupil spending is associated with lower rank-rank slopes. Specifically, each additional $1,000 in per-pupil spending is associated with about a 0.0158 decrease in the rank-rank slope.
+
+Although the coefficient is statistically significant, the size of the relationship remains modest. The regression therefore supports the broader conclusion of the paper: spending is associated with mobility in the expected direction, but the relationship is relatively weak and does not explain most of the variation in mobility across commuting zones.
+
+## Conclusion and Limitations
+
+This analysis has several important limitations. First, the project is descriptive and cannot establish causality. The results show that spending and mobility are associated, but they do not demonstrate that higher spending causes mobility to increase. Higher spending places may differ from lower-spending places in many other ways, including housing conditions, local labor markets, and family income levels, to name a few.
+
+Second, the spending variable is measured at the state level and assigned to commuting zones. Because commuting zones and state education systems do not perfectly overalp, the spending measure may not fully capture the actual educational resources available in each commuting zone. 
+
+Third, per-pupil spending measures the amount of money spent, but not how those funds are used. In other words, two places may spend similar amounts per student while providing very different educational experiences.
+
+## Conclusion
+
+This paper examined whether higher per-pupil education spending is strongly associated with intergenerational mobility across U.S. commuting zones. The findings suggest that the relationship exists, but it is weak.
+
+Higher spending is associated with slightly lower rank-rank slopes, meaning slightly greater mobility. However, the scatterplot remains widely dispersed, the spending-group analysis does not show a steady trend, and the regression coefficient is relatively small. These results suggest that spending alone does not explain why some places present greater economic mobility than others.
+
+This does not mean education spending is unimportant. Rather, the findings suggest that spending is likely only one part of a larger opportunity structure that includes schools, neighborhoods, labor markets, and local policy environments.
+
+A future version of this project could use district-level spending rather than state-level measures and include additional controls for poverty, segregation, housing costs, and labor-market conditions. That would help make it easier to determine whether the weak relationshop found here reflects the limits of spending itself or the influence of wider local conditions.
+
+In conclusion, the results point toward a more complicated story than the idea that higher school spending is strongly associated with hugher mobility. While spending certainly matters, it is not the whole story.
